@@ -42,7 +42,12 @@ def train(seed=0, epochs=50, dropout_p=0.0, ckpt_dir='checkpoints',
         for x, y in L['train']:
             x, y = x.cuda(), y.cuda()
             opt.zero_grad(); crit(model(x), y).backward(); opt.step()
-        sched.step(); elapsed += time.time() - t0
+        
+        sched.step()
+        ep_time = time.time() - t0
+        elapsed += ep_time
+        eta = (epochs - ep - 1) * ep_time / 60
+        print(f'{tag} epoch {ep+1}/{epochs}  {ep_time:.0f}s  total {elapsed/60:.1f} min  eta {eta:.0f} min')
         torch.save({'model': model.state_dict(), 'opt': opt.state_dict(),
                     'sched': sched.state_dict(), 'epoch': ep,
                     'elapsed': elapsed, 'seed': seed, 'dropout_p': dropout_p}, ckpt)
