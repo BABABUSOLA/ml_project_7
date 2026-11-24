@@ -86,3 +86,4 @@ def single_member_spread(logits_dir, members=5):
     eces = [ece(combine(e['test_logits'])[0], y_test) for e in ens]
     return {'acc_mean': float(np.mean(accs)), 'acc_std': float(np.std(accs, ddof=1)),
             'ece_mean': float(np.mean(eces)), 'ece_std': float(np.std(eces, ddof=1))}
+            
