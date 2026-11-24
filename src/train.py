@@ -8,11 +8,19 @@ def set_seed(seed):
     torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.benchmark = False
 
-def train(seed=0, epochs=50, dropout_p=0.0, ckpt_dir='checkpoints', tag=None):
+def train(seed=0, epochs=50, dropout_p=0.0, ckpt_dir='checkpoints',
+          tag=None, force=False):
     set_seed(seed)
     tag = tag or (f'dropout_s{seed}' if dropout_p > 0 else f'ens_s{seed}')
     os.makedirs(ckpt_dir, exist_ok=True)
     ckpt = f'{ckpt_dir}/{tag}.pt'
+
+    # already finished? return before building model or loaders
+    if os.path.exists(ckpt) and not force:
+        st = torch.load(ckpt, map_location='cpu')
+        if st['epoch'] + 1 >= epochs:
+            print(f'{tag}: complete ({epochs} epochs, {st["elapsed"]/60:.1f} min) - skipping')
+            return ckpt, st['elapsed']
 
     L = loaders(seed=seed)
     model = make_resnet18(dropout_p=dropout_p).cuda()
@@ -22,7 +30,7 @@ def train(seed=0, epochs=50, dropout_p=0.0, ckpt_dir='checkpoints', tag=None):
     crit = nn.CrossEntropyLoss()
 
     start, elapsed = 0, 0.0
-    if os.path.exists(ckpt):                      # resume after a Colab timeout
+    if os.path.exists(ckpt) and not force:        # partial run - resume
         st = torch.load(ckpt)
         model.load_state_dict(st['model']); opt.load_state_dict(st['opt'])
         sched.load_state_dict(st['sched'])

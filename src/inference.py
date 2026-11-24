@@ -2,10 +2,11 @@ import numpy as np, torch
 from src.models import make_resnet18
 
 def enable_mc_dropout(model):
-    """Dropout on, BatchNorm stays in eval. model.train() would break BatchNorm."""
+    """Dropout on, BatchNorm stays in eval. model.train() would break BatchNorm.
+    Dropout2d must be listed explicitly — it is not a subclass of Dropout."""
     model.eval()
     for m in model.modules():
-        if isinstance(m, torch.nn.Dropout):
+        if isinstance(m, (torch.nn.Dropout, torch.nn.Dropout2d)):
             m.train()
 
 @torch.no_grad()

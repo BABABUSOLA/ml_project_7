@@ -1,7 +1,6 @@
 __pycache__/
 *.pyc
 data/
-configs/
 *.pt
 *.pth
 *.npz
