@@ -113,16 +113,17 @@ def make_plots(logits_dir, out_dir='results', members=5, n_bins=15):
         fig.tight_layout(); f = f'{out_dir}/rejection_curve.png'
         fig.savefig(f, dpi=150); plt.close(fig); written.append(f)
 
-    # 5 ---- ensemble size sweep ------------------------------------------
+    # 5 ---- ensemble size sweep, as relative change from M=1 --------------
     path = f'{out_dir}/size_sweep.csv'
     if os.path.exists(path):
         df = pd.read_csv(path)
-        fig, (a1, a2) = plt.subplots(1, 2, figsize=(8, 3.4))
-        a1.plot(df['M'], df['acc'], 'o-'); a1.set_xlabel('M'); a1.set_ylabel('accuracy')
-        a2.plot(df['M'], df['ece'], 'o-', color='tab:red')
-        a2.set_xlabel('M'); a2.set_ylabel('ECE')
-        for a in (a1, a2):
-            a.set_xticks(df['M']); a.grid(alpha=.3)
+        fig, ax = plt.subplots(figsize=(5, 3.6))
+        ax.plot(df['M'], 100*(df['acc']/df['acc'].iloc[0] - 1), 'o-', label='accuracy')
+        ax.plot(df['M'], 100*(df['ece']/df['ece'].iloc[0] - 1), 'o-',
+                color='tab:red', label='ECE')
+        ax.axhline(0, color='k', lw=.8)
+        ax.set_xlabel('M'); ax.set_ylabel('% change from M=1')
+        ax.set_xticks(df['M']); ax.grid(alpha=.3); ax.legend(fontsize=8)
         fig.tight_layout(); f = f'{out_dir}/size_sweep.png'
         fig.savefig(f, dpi=150); plt.close(fig); written.append(f)
 
