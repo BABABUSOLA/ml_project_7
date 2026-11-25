@@ -1,6 +1,6 @@
 import os, time, random
 import numpy as np, torch, torch.nn as nn
-from src.data import loaders
+from src.data import loaders, SPECS
 from src.models import make_resnet18
 
 def set_seed(seed):

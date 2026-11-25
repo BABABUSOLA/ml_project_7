@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from src.models import make_resnet18
-from src.data import loaders
+from src.data import loaders, SPECS
 
 
 def enable_mc_dropout(model):
