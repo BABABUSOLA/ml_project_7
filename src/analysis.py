@@ -9,10 +9,10 @@ from src.ood import combine, scores
 KEYS = ['val_logits', 'test_logits', 'svhn_logits']
 
 
-def load_logits(logits_dir, members=5):
+def load_logits(logits_dir, members=5, dataset='cifar10'):
     """Read every saved logits file into memory."""
-    ens = [dict(np.load(f'{logits_dir}/ens_s{s}.npz')) for s in range(members)]
-    path = f'{logits_dir}/mcdropout.npz'
+    ens = [dict(np.load(f'{logits_dir}/{dataset}_ens_s{s}.npz')) for s in range(members)]
+    path = f'{logits_dir}/{dataset}_mcdropout.npz'
     mcd = dict(np.load(path)) if os.path.exists(path) else None
     return ens, mcd
 

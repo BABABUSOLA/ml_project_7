@@ -31,7 +31,9 @@ def dump_logits(ckpt_path, out_path, mc_passes=None, seed=0, force=False):
         return out_path
 
     st = torch.load(ckpt_path)
-    model = make_resnet18(dropout_p=st.get('dropout_p', 0.0)).cuda()
+    ds = st.get('dataset', 'cifar10')
+    model = make_resnet18(num_classes=SPECS[ds]['n_classes'],
+                          dropout_p=st.get('dropout_p', 0.0)).cuda()
     model.load_state_dict(st['model'])
     model.eval()
 
@@ -39,7 +41,7 @@ def dump_logits(ckpt_path, out_path, mc_passes=None, seed=0, force=False):
         enable_mc_dropout(model)
         torch.manual_seed(seed)          # reproducible dropout masks
 
-    L = loaders()
+    L = loaders(dataset=ds)
     out = {}
     for name in ['val', 'test', 'svhn']:
         Ls, Ys = [], []
