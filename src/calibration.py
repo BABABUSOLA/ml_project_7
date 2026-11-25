@@ -12,7 +12,7 @@ def fit_temperature(val_logits, val_labels):
         loss = F.cross_entropy(logits / log_T.exp(), labels)
         loss.backward(); return loss
     opt.step(closure)
-    return float(log_T.exp())
+    return float(log_T.detach().exp())
 
 def apply_temperature(logits, T):
     return logits / T
