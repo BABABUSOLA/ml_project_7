@@ -4,4 +4,6 @@ data/
 *.pt
 *.pth
 *.npz
+*.npz
+!results/demo_logits.npz
 .ipynb_checkpoints/
