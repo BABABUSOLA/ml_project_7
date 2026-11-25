@@ -17,16 +17,17 @@ LABELS = {'baseline': 'Single network',
 
 
 # ---------------------------------------------------------------- helpers
-def reliability(probs, labels, ax, n_bins=15, label='', color=None):
-    """Confidence against observed accuracy, per bin. Diagonal = calibrated."""
+def reliability(probs, labels, ax, n_bins=15, label='', min_count=20):
     conf, acc = probs.max(1), (probs.argmax(1) == labels).astype(float)
     edges = np.linspace(0, 1, n_bins + 1)
-    xs, ys = [], []
+    xs, ys, ns = [], [], []
     for lo, hi in zip(edges[:-1], edges[1:]):
         m = (conf > lo) & (conf <= hi)
-        if m.sum():
-            xs.append(conf[m].mean()); ys.append(acc[m].mean())
-    ax.plot(xs, ys, 'o-', label=label, color=color, ms=4)
+        if m.sum() >= min_count:                      # drop near-empty bins
+            xs.append(conf[m].mean()); ys.append(acc[m].mean()); ns.append(m.sum())
+    sizes = 20 + 180 * np.array(ns) / max(ns)         # marker area ~ bin population
+    ax.plot(xs, ys, '-', label=label, lw=1.5)
+    ax.scatter(xs, ys, s=sizes, alpha=.7)
 
 
 def confidence_hist(id_conf, ood_conf, ax):
