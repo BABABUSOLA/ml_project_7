@@ -12,7 +12,8 @@ KEYS = ['val_logits', 'test_logits', 'svhn_logits']
 def load_logits(logits_dir, members=5):
     """Read every saved logits file into memory."""
     ens = [dict(np.load(f'{logits_dir}/ens_s{s}.npz')) for s in range(members)]
-    mcd = dict(np.load(f'{logits_dir}/mcdropout.npz'))
+    path = f'{logits_dir}/mcdropout.npz'
+    mcd = dict(np.load(path)) if os.path.exists(path) else None
     return ens, mcd
 
 
@@ -86,4 +87,3 @@ def single_member_spread(logits_dir, members=5):
     eces = [ece(combine(e['test_logits'])[0], y_test) for e in ens]
     return {'acc_mean': float(np.mean(accs)), 'acc_std': float(np.std(accs, ddof=1)),
             'ece_mean': float(np.mean(eces)), 'ece_std': float(np.std(eces, ddof=1))}
-            
