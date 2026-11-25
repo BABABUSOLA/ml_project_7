@@ -3,8 +3,6 @@ __pycache__/
 data/
 *.pt
 *.pth
-*.npz
-*.npz
 !logits/ens_s*.npz
 !results/demo_logits.npz
 .ipynb_checkpoints/
