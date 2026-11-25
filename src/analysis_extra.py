@@ -65,10 +65,12 @@ def run_extra(logits_dir, out_dir='results', members=5):
                     rej.append({'method': name, **row})
 
     sig = []
-    for A, B in [('ensemble', 'baseline'),
-                 ('ensemble', 'mcdropout'),
-                 ('mcdropout', 'baseline')]:
-        sig.append({'A': A, 'B': B, **paired_ttest(pbars[A], pbars[B], y_test)})
+    pairs = [('ensemble', 'baseline'),
+             ('ensemble', 'mcdropout'),
+             ('mcdropout', 'baseline')]
+    for A, B in pairs:
+        if A in pbars and B in pbars:          # skip pairs needing an absent method
+            sig.append({'A': A, 'B': B, **paired_ttest(pbars[A], pbars[B], y_test)})
 
     os.makedirs(out_dir, exist_ok=True)
     dfs = {}
