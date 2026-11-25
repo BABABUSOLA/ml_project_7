@@ -40,9 +40,19 @@ def main():
             dump_logits(f'{CKPT}/mcdropout.pt', out, mc_passes=a.passes)
 
     # ---- 3. analyse ----------------------------------------------------
-    from src.analysis import run_analysis
+    from src.analysis import run_analysis, size_sweep
+    from src.analysis_extra import run_extra
+    from src.plots import make_plots
+
     run_analysis(logits_dir=LOG, out_dir='results', members=a.members)
-    print('[done] results/ written')
+    size_sweep(logits_dir=LOG, out_dir='results', members=a.members)
+    run_extra(logits_dir=LOG, out_dir='results', members=a.members)
+    make_plots(LOG, 'results', members=a.members)
+
+    import glob
+    print('[done] wrote:')
+    for f in sorted(glob.glob('results/*')):
+        print('  ', f, f'{os.path.getsize(f)/1e3:.0f} KB')
 
 if __name__ == '__main__':
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
