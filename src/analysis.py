@@ -19,11 +19,12 @@ def load_logits(logits_dir, members=5):
 
 def build_methods(ens, mcd):
     """Three methods, each shaped (M, N, C). Baseline is one member with M=1."""
-    return {
-        'baseline':  {k: ens[0][k][None] for k in KEYS},
-        'ensemble':  {k: np.stack([e[k] for e in ens]) for k in KEYS},
-        'mcdropout': {k: mcd[k] for k in KEYS},
-    }
+    keys = ['val_logits', 'test_logits', 'svhn_logits']
+    m = {'baseline': {k: ens[0][k][None] for k in keys},
+         'ensemble': {k: np.stack([e[k] for e in ens]) for k in keys}}
+    if mcd is not None:
+        m['mcdropout'] = {k: mcd[k] for k in keys}
+    return m
 
 
 def run_analysis(logits_dir, out_dir='results', members=5):
