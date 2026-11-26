@@ -43,9 +43,9 @@ def paired_ttest(p_a, p_b, labels):
             'significant_at_0.05': bool(p < 0.05)}
 
 
-def run_extra(logits_dir, out_dir='results', members=5):
+def run_extra(logits_dir, out_dir='results', members=5, dataset='cifar10'):
     """Misclassification detection, rejection curves and paired t-tests."""
-    ens, mcd = load_logits(logits_dir, members)
+    ens, mcd = load_logits(logits_dir, members, dataset)
     y_test, y_val = ens[0]['test_labels'], ens[0]['val_labels']
     methods = build_methods(ens, mcd)
 

@@ -27,9 +27,9 @@ def build_methods(ens, mcd):
     return m
 
 
-def run_analysis(logits_dir, out_dir='results', members=5):
+def run_analysis(logits_dir, out_dir='results', members=5, dataset='cifar10'):
     """Main table: 3 methods x {unscaled, temperature-scaled}."""
-    ens, mcd = load_logits(logits_dir, members)
+    ens, mcd = load_logits(logits_dir, members, dataset)
     y_test, y_val = ens[0]['test_labels'], ens[0]['val_labels']
 
     rows = []
@@ -63,9 +63,9 @@ def run_analysis(logits_dir, out_dir='results', members=5):
     return df
 
 
-def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5):
+def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5, dataset='cifar10'):
     """How much does the ensemble gain per added member? Free - subsets saved logits."""
-    ens, _ = load_logits(logits_dir, members)
+    ens, _ = load_logits(logits_dir, members, dataset)
     y_test = ens[0]['test_labels']
     rows = []
     for M in sizes:
@@ -80,9 +80,9 @@ def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5):
     return df
 
 
-def single_member_spread(logits_dir, members=5):
+def single_member_spread(logits_dir, members=5, dataset='cifar10'):
     """The M members are M independent single networks - report mean +/- std."""
-    ens, _ = load_logits(logits_dir, members)
+    ens, _ = load_logits(logits_dir, members, dataset)
     y_test = ens[0]['test_labels']
     accs = [accuracy(combine(e['test_logits'])[0], y_test) for e in ens]
     eces = [ece(combine(e['test_logits'])[0], y_test) for e in ens]
