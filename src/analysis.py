@@ -57,14 +57,15 @@ def run_analysis(logits_dir, out_dir='results', members=5, dataset='cifar10'):
                 row[f'fpr95_{k}'] = fpr_at_95tpr(s_id[k], s_ood[k])
             rows.append(row)
 
-    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, dataset)          # <-- subfolder
+    os.makedirs(out, exist_ok=True)
     df = pd.DataFrame(rows)
-    df.to_csv(f'{out_dir}/main_table.csv', index=False)
+    df.to_csv(f'{out}/main_table.csv', index=False)
     return df
 
 
-def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5, dataset='cifar10'):
-    """How much does the ensemble gain per added member? Free - subsets saved logits."""
+def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5,
+               dataset='cifar10'):
     ens, _ = load_logits(logits_dir, members, dataset)
     y_test = ens[0]['test_labels']
     rows = []
@@ -74,9 +75,10 @@ def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5, datase
                      'acc':   accuracy(p_bar, y_test),
                      'ece':   ece(p_bar, y_test),
                      'brier': brier_multiclass(p_bar, y_test)})
-    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, dataset)          # <-- subfolder
+    os.makedirs(out, exist_ok=True)
     df = pd.DataFrame(rows)
-    df.to_csv(f'{out_dir}/size_sweep.csv', index=False)
+    df.to_csv(f'{out}/size_sweep.csv', index=False)
     return df
 
 

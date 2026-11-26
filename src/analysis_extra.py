@@ -72,11 +72,12 @@ def run_extra(logits_dir, out_dir='results', members=5, dataset='cifar10'):
         if A in pbars and B in pbars:          # skip pairs needing an absent method
             sig.append({'A': A, 'B': B, **paired_ttest(pbars[A], pbars[B], y_test)})
 
-    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, dataset)          # <-- subfolder
+    os.makedirs(out, exist_ok=True)
     dfs = {}
     for key, rows in [('misclassification', mis),
                       ('rejection_curve', rej),
                       ('significance', sig)]:
         dfs[key] = pd.DataFrame(rows)
-        dfs[key].to_csv(f'{out_dir}/{key}.csv', index=False)
+        dfs[key].to_csv(f'{out}/{key}.csv', index=False)
     return dfs
