@@ -57,6 +57,13 @@ def get_split(dataset='cifar10'):
     p = split_path(dataset)
     if os.path.exists(p):
         return json.load(open(p))
+
+    # Generating a split that should already exist is dangerous: any model
+    # already trained for this dataset was fitted against a different
+    # partition, so its validation set may now overlap its training data.
+    print(f'*** GENERATING NEW SPLIT {p} ***')
+    print(f'*** If checkpoints already exist for {dataset}, their results '
+          f'are no longer valid ***')
     n_total = SPECS[dataset]['n_train']
     rng = np.random.RandomState(SPLIT_SEED)
     perm = rng.permutation(n_total)
