@@ -9,10 +9,10 @@ from src.ood import combine, scores
 KEYS = ['val_logits', 'test_logits', 'svhn_logits']
 
 
-def load_logits(logits_dir, members=5):
+def load_logits(logits_dir, members=5, dataset='cifar10'):
     """Read every saved logits file into memory."""
-    ens = [dict(np.load(f'{logits_dir}/ens_s{s}.npz')) for s in range(members)]
-    path = f'{logits_dir}/mcdropout.npz'
+    ens = [dict(np.load(f'{logits_dir}/{dataset}_ens_s{s}.npz')) for s in range(members)]
+    path = f'{logits_dir}/{dataset}_mcdropout.npz'
     mcd = dict(np.load(path)) if os.path.exists(path) else None
     return ens, mcd
 
@@ -27,9 +27,9 @@ def build_methods(ens, mcd):
     return m
 
 
-def run_analysis(logits_dir, out_dir='results', members=5):
+def run_analysis(logits_dir, out_dir='results', members=5, dataset='cifar10'):
     """Main table: 3 methods x {unscaled, temperature-scaled}."""
-    ens, mcd = load_logits(logits_dir, members)
+    ens, mcd = load_logits(logits_dir, members, dataset)
     y_test, y_val = ens[0]['test_labels'], ens[0]['val_labels']
 
     rows = []
@@ -57,15 +57,16 @@ def run_analysis(logits_dir, out_dir='results', members=5):
                 row[f'fpr95_{k}'] = fpr_at_95tpr(s_id[k], s_ood[k])
             rows.append(row)
 
-    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, dataset)          # <-- subfolder
+    os.makedirs(out, exist_ok=True)
     df = pd.DataFrame(rows)
-    df.to_csv(f'{out_dir}/main_table.csv', index=False)
+    df.to_csv(f'{out}/main_table.csv', index=False)
     return df
 
 
-def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5):
-    """How much does the ensemble gain per added member? Free - subsets saved logits."""
-    ens, _ = load_logits(logits_dir, members)
+def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5,
+               dataset='cifar10'):
+    ens, _ = load_logits(logits_dir, members, dataset)
     y_test = ens[0]['test_labels']
     rows = []
     for M in sizes:
@@ -74,15 +75,16 @@ def size_sweep(logits_dir, out_dir='results', sizes=(1, 3, 5), members=5):
                      'acc':   accuracy(p_bar, y_test),
                      'ece':   ece(p_bar, y_test),
                      'brier': brier_multiclass(p_bar, y_test)})
-    os.makedirs(out_dir, exist_ok=True)
+    out = os.path.join(out_dir, dataset)          # <-- subfolder
+    os.makedirs(out, exist_ok=True)
     df = pd.DataFrame(rows)
-    df.to_csv(f'{out_dir}/size_sweep.csv', index=False)
+    df.to_csv(f'{out}/size_sweep.csv', index=False)
     return df
 
 
-def single_member_spread(logits_dir, members=5):
+def single_member_spread(logits_dir, members=5, dataset='cifar10'):
     """The M members are M independent single networks - report mean +/- std."""
-    ens, _ = load_logits(logits_dir, members)
+    ens, _ = load_logits(logits_dir, members, dataset)
     y_test = ens[0]['test_labels']
     accs = [accuracy(combine(e['test_logits'])[0], y_test) for e in ens]
     eces = [ece(combine(e['test_logits'])[0], y_test) for e in ens]
