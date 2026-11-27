@@ -6,19 +6,18 @@ from scipy import stats
 from src.metrics import accuracy, auroc
 from src.calibration import fit_temperature, apply_temperature
 from src.ood import combine, scores
-from src.analysis import load_logits, build_methods
+from src.analysis import load_logits, build_methods, _out
 
 
 def misclassification_auroc(p_bar, labels, score):
-    """Does uncertainty separate the model's own errors from its correct answers?
-    One-vs-all framing from the confusion-matrix material: errors are the positive class."""
+    """Does uncertainty separate the model's own errors from its correct
+    answers? One-vs-all framing: errors are the positive class."""
     correct = (p_bar.argmax(1) == labels)
     return auroc(score[correct], score[~correct])
 
 
 def rejection_curve(p_bar, labels, score, rates=np.arange(0, 0.55, 0.05)):
-    """Abstain on the most uncertain fraction; accuracy on what is kept.
-    Quantifies the act / flag / reject policy from the Application section."""
+    """Abstain on the most uncertain fraction; accuracy on what is kept."""
     order = np.argsort(score)                      # low score = confident
     out = []
     for r in rates:
@@ -30,8 +29,8 @@ def rejection_curve(p_bar, labels, score, rates=np.arange(0, 0.55, 0.05)):
 
 
 def paired_ttest(p_a, p_b, labels):
-    """Hypothesis testing (paired t-test). c_i = a_i - b_i on per-example errors;
-    T = c_bar*sqrt(K)/s."""
+    """Hypothesis testing (paired t-test). c_i = a_i - b_i on per-example
+    errors; T = c_bar * sqrt(K) / s at K-1 degrees of freedom."""
     a = (p_a.argmax(1) != labels).astype(float)
     b = (p_b.argmax(1) != labels).astype(float)
     c = a - b
@@ -58,22 +57,20 @@ def run_extra(logits_dir, out_dir='results', members=5, dataset='cifar10'):
 
         for sname, sc in scores(p_bar, probs).items():
             mis.append({'method': name, 'score': sname,
-                        'auroc_misclassification': misclassification_auroc(
-                            p_bar, y_test, sc)})
+                        'auroc_misclassification':
+                            misclassification_auroc(p_bar, y_test, sc)})
             if sname == 'entropy':
                 for row in rejection_curve(p_bar, y_test, sc):
                     rej.append({'method': name, **row})
 
     sig = []
-    pairs = [('ensemble', 'baseline'),
-             ('ensemble', 'mcdropout'),
-             ('mcdropout', 'baseline')]
-    for A, B in pairs:
-        if A in pbars and B in pbars:          # skip pairs needing an absent method
+    for A, B in [('ensemble', 'baseline'),
+                 ('ensemble', 'mcdropout'),
+                 ('mcdropout', 'baseline')]:
+        if A in pbars and B in pbars:        # skip pairs needing an absent method
             sig.append({'A': A, 'B': B, **paired_ttest(pbars[A], pbars[B], y_test)})
 
-    out = os.path.join(out_dir, dataset)          # <-- subfolder
-    os.makedirs(out, exist_ok=True)
+    out = _out(out_dir, dataset)
     dfs = {}
     for key, rows in [('misclassification', mis),
                       ('rejection_curve', rej),

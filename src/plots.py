@@ -9,32 +9,37 @@ from sklearn.metrics import roc_curve
 from src.metrics import ece
 from src.calibration import fit_temperature, apply_temperature
 from src.ood import combine, scores
-from src.analysis import load_logits, build_methods
+from src.analysis import load_logits, build_methods, _out
+from src.data import SPECS
 
 LABELS = {'baseline': 'Single network',
           'ensemble': 'Deep ensemble',
           'mcdropout': 'MC dropout'}
 
-ID_NAME = {'cifar10': 'CIFAR-10', 'cifar100': 'CIFAR-100'}
+ID_NAME = {'cifar10': 'CIFAR-10', 'cifar100': 'CIFAR-100', 'mnist': 'MNIST'}
 
 
 # ---------------------------------------------------------------- helpers
 def reliability(probs, labels, ax, n_bins=15, label='', min_count=20):
+    """Bins holding fewer than min_count samples are dropped from the plot
+    only; ECE is still computed over all bins."""
     conf, acc = probs.max(1), (probs.argmax(1) == labels).astype(float)
     edges = np.linspace(0, 1, n_bins + 1)
     xs, ys, ns = [], [], []
     for lo, hi in zip(edges[:-1], edges[1:]):
         m = (conf > lo) & (conf <= hi)
-        if m.sum() >= min_count:                      # drop near-empty bins
+        if m.sum() >= min_count:
             xs.append(conf[m].mean()); ys.append(acc[m].mean()); ns.append(m.sum())
-    sizes = 20 + 180 * np.array(ns) / max(ns)         # marker area ~ bin population
+    if not xs:
+        return
+    sizes = 20 + 180 * np.array(ns) / max(ns)     # marker area ~ bin population
     ax.plot(xs, ys, '-', label=label, lw=1.5)
     ax.scatter(xs, ys, s=sizes, alpha=.7)
 
 
-def confidence_hist(id_conf, ood_conf, ax, id_label='CIFAR-10'):
+def confidence_hist(id_conf, ood_conf, ax, id_label='CIFAR-10', ood_label='SVHN'):
     ax.hist(id_conf,  bins=40, alpha=.55, density=True, label=f'{id_label} (ID)')
-    ax.hist(ood_conf, bins=40, alpha=.55, density=True, label='SVHN (OOD)')
+    ax.hist(ood_conf, bins=40, alpha=.55, density=True, label=f'{ood_label} (OOD)')
     ax.set_xlabel('max softmax probability'); ax.set_ylabel('density')
     ax.legend(fontsize=8)
 
@@ -50,13 +55,13 @@ def make_plots(logits_dir, out_dir='results', members=5, n_bins=15,
                dataset='cifar10'):
     """Produce and save every figure under <out_dir>/<dataset>/.
     Returns the list of files written."""
-    out = os.path.join(out_dir, dataset)
-    os.makedirs(out, exist_ok=True)                   # creates the subfolder too
+    out = _out(out_dir, dataset)                  # creates the subfolder
 
     ens, mcd = load_logits(logits_dir, members, dataset)
     y_test, y_val = ens[0]['test_labels'], ens[0]['val_labels']
     methods = build_methods(ens, mcd)
-    id_label = ID_NAME.get(dataset, dataset)
+    id_label  = ID_NAME.get(dataset, dataset)
+    ood_label = SPECS[dataset]['ood_name']
     written = []
 
     # cache p_bar before/after scaling for every method
@@ -66,11 +71,11 @@ def make_plots(logits_dir, out_dir='results', members=5, n_bins=15,
         T = fit_temperature(np.log(pv + 1e-12), y_val)
         cache[name] = {
             'T': T,
-            'none': combine(M['test_logits']),
-            'scaled': combine(apply_temperature(M['test_logits'], T)),
-            'svhn_scaled': combine(apply_temperature(M['svhn_logits'], T)),
+            'none':       combine(M['test_logits']),
+            'scaled':     combine(apply_temperature(M['test_logits'], T)),
+            'ood_scaled': combine(apply_temperature(M['ood_logits'], T)),
         }
-    n = len(cache)                                    # 2 without MC dropout, else 3
+    n = len(cache)                                # 2 without MC dropout, else 3
 
     # 1 ---- reliability diagrams, one panel per method -------------------
     fig, axes = plt.subplots(1, n, figsize=(4 * n, 3.8), sharey=True, squeeze=False)
@@ -89,8 +94,8 @@ def make_plots(logits_dir, out_dir='results', members=5, n_bins=15,
     # 2 ---- confidence histograms, ID vs OOD -----------------------------
     fig, axes = plt.subplots(1, n, figsize=(4 * n, 3.4), sharey=True, squeeze=False)
     for ax, (name, c) in zip(axes[0], cache.items()):
-        confidence_hist(c['scaled'][0].max(1), c['svhn_scaled'][0].max(1),
-                        ax, id_label=id_label)
+        confidence_hist(c['scaled'][0].max(1), c['ood_scaled'][0].max(1),
+                        ax, id_label=id_label, ood_label=ood_label)
         ax.set_title(LABELS[name])
     fig.tight_layout(); f = f'{out}/confidence_hist.png'
     fig.savefig(f, dpi=150); plt.close(fig); written.append(f)
@@ -98,19 +103,19 @@ def make_plots(logits_dir, out_dir='results', members=5, n_bins=15,
     # 3 ---- OOD ROC, one panel per method, one line per score ------------
     fig, axes = plt.subplots(1, n, figsize=(4 * n, 3.8), sharey=True, squeeze=False)
     for ax, (name, c) in zip(axes[0], cache.items()):
-        p_id, probs_id = c['scaled']
-        p_ood, probs_ood = c['svhn_scaled']
+        p_id,  probs_id  = c['scaled']
+        p_ood, probs_ood = c['ood_scaled']
         s_id, s_ood = scores(p_id, probs_id), scores(p_ood, probs_ood)
         for k in s_id:
             roc(s_id[k], s_ood[k], ax, label=k)
         ax.plot([0, 1], [0, 1], 'k--', lw=1)
         ax.set_title(LABELS[name]); ax.set_xlabel('FPR'); ax.legend(fontsize=8)
     axes[0][0].set_ylabel('TPR')
-    fig.tight_layout(); f = f'{out}/ood_roc.png'           # was missing the prefix
+    fig.tight_layout(); f = f'{out}/ood_roc.png'
     fig.savefig(f, dpi=150); plt.close(fig); written.append(f)
 
     # 4 ---- accuracy against coverage ------------------------------------
-    path = f'{out}/rejection_curve.csv'                    # written by run_extra
+    path = f'{out}/rejection_curve.csv'           # written by run_extra
     if os.path.exists(path):
         df = pd.read_csv(path)
         fig, ax = plt.subplots(figsize=(5, 3.6))
@@ -126,7 +131,7 @@ def make_plots(logits_dir, out_dir='results', members=5, n_bins=15,
         print(f'[plots] {path} absent - run run_extra first; skipping')
 
     # 5 ---- ensemble size sweep, as relative change from M=1 --------------
-    path = f'{out}/size_sweep.csv'                         # written by size_sweep
+    path = f'{out}/size_sweep.csv'                # written by size_sweep
     if os.path.exists(path):
         df = pd.read_csv(path)
         fig, ax = plt.subplots(figsize=(5, 3.6))

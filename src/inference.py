@@ -17,10 +17,13 @@ def enable_mc_dropout(model):
 
 @torch.no_grad()
 def dump_logits(ckpt_path, out_path, mc_passes=None, seed=0, force=False):
-    """Run one trained model over val/test/svhn and save the raw logits.
+    """Run one trained model over val / test / ood and save the raw logits.
 
     mc_passes=None -> single deterministic pass, arrays are (N, C)
     mc_passes=T    -> dropout left on, T stochastic passes, arrays are (T, N, C)
+
+    The 'ood' split is whatever SPECS names for this dataset: SVHN for the
+    CIFAR tracks, Fashion-MNIST for MNIST.
 
     Skips entirely if out_path already exists, unless force=True.
     """
@@ -43,7 +46,7 @@ def dump_logits(ckpt_path, out_path, mc_passes=None, seed=0, force=False):
 
     L = loaders(dataset=ds)
     out = {}
-    for name in ['val', 'test', 'svhn']:
+    for name in ['val', 'test', 'ood']:          # 'ood' was 'svhn'
         Ls, Ys = [], []
         for x, y in L[name]:
             x = x.cuda()
